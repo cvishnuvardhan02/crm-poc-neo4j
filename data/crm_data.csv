@@ -1,0 +1,25 @@
+customer_id,customer_name,industry,employee_id,employee_name,opportunity_id,opportunity_name,domain,product,stage,opportunity_value,outcome,interaction_count,meeting_count,days_in_stage,previous_customer_interactions
+C001,ABC Corp,Technology,E001,John,O001,ABC AI Platform,AI,AI Platform,Closed Won,250000,Won,14,4,12,5
+C002,XYZ Ltd,Finance,E002,Sarah,O002,XYZ Cybersecurity,Cybersecurity,Security Suite,Closed Won,180000,Won,11,3,15,4
+C003,DataTech,Technology,E001,John,O003,DataTech ML,Machine Learning,ML Platform,Closed Won,220000,Won,12,4,10,3
+C004,HealthCo,Healthcare,E003,Jake,O004,Health Data Science,Data Science,Analytics Platform,Closed Lost,160000,Lost,5,1,28,1
+C005,CloudWorks,Technology,E001,John,O005,Cloud AI,AI,Cloud AI Suite,Closed Won,300000,Won,16,5,9,6
+C006,SecureBank,Finance,E002,Sarah,O006,SecureBank Cyber,Cybersecurity,Security Suite,Closed Won,275000,Won,15,5,8,7
+C007,ML Labs,Technology,E003,Jake,O007,ML Labs Platform,Machine Learning,ML Platform,Closed Won,210000,Won,10,3,14,2
+C008,Insight Health,Healthcare,E002,Sarah,O008,Healthcare Analytics,Data Science,Analytics Platform,Closed Won,195000,Won,13,4,11,4
+C009,AutoAI,Automotive,E001,John,O009,Auto AI,AI,AI Platform,Closed Lost,140000,Lost,7,2,24,2
+C010,FinData,Finance,E003,Jake,O010,Financial Data,Data Science,Analytics Platform,Closed Won,230000,Won,14,4,13,5
+C011,CyberTech,Technology,E001,John,O011,CyberTech Security,Cybersecurity,Security Suite,Closed Won,260000,Won,13,4,10,4
+C012,CloudBank,Finance,E002,Sarah,O012,Cloud Banking,Cloud,Cloud Platform,Closed Won,240000,Won,12,4,9,5
+C013,AI Health,Healthcare,E003,Jake,O013,AI Diagnostics,AI,AI Platform,Closed Lost,190000,Lost,6,2,21,1
+C014,DataWorks,Technology,E002,Sarah,O014,DataWorks ML,Machine Learning,ML Platform,Closed Won,215000,Won,13,4,12,3
+C015,CloudOps,Technology,E003,Jake,O015,Cloud Operations,Cloud,Cloud Platform,Closed Won,175000,Won,11,3,16,2
+C016,MedSecure,Healthcare,E001,John,O016,Medical Security,Cybersecurity,Security Suite,Closed Won,205000,Won,12,4,12,4
+C017,RetailAI,Retail,E002,Sarah,O017,Retail AI,AI,AI Platform,Closed Won,155000,Won,10,3,10,3
+C018,RetailData,Retail,E003,Jake,O018,Retail Data Science,Data Science,Analytics Platform,Closed Won,165000,Won,9,3,13,2
+C019,FutureML,Technology,E001,John,O019,Future ML,Machine Learning,ML Platform,Open,280000,,9,3,7,2
+C020,FinSecure,Finance,E002,Sarah,O020,FinSecure Security,Cybersecurity,Security Suite,Open,310000,,8,2,6,3
+C021,HealthCloud,Healthcare,E003,Jake,O021,Health Cloud,Cloud,Cloud Platform,Open,225000,,7,2,8,2
+C022,DataCloud,Technology,E001,John,O022,Data Cloud,Cloud,Cloud Platform,Open,260000,,8,3,5,3
+C023,AI Finance,Finance,E002,Sarah,O023,AI Finance,AI,AI Platform,Open,290000,,10,3,6,4
+C024,ML Health,Healthcare,E003,Jake,O024,ML Healthcare,Machine Learning,ML Platform,Open,205000,,7,2,9,2
