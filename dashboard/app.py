@@ -42,6 +42,10 @@ st.markdown(
     """
     <style>
 
+    /* ========================================================
+       GLOBAL
+       ======================================================== */
+
     .stApp {
         background: #f5f7fb;
     }
@@ -53,6 +57,11 @@ st.markdown(
         max-width: 1600px;
     }
 
+
+    /* ========================================================
+       SIDEBAR
+       ======================================================== */
+
     section[data-testid="stSidebar"] {
         background: #111827;
         border-right: 1px solid #1f2937;
@@ -61,6 +70,11 @@ st.markdown(
     section[data-testid="stSidebar"] * {
         color: #e5e7eb;
     }
+
+
+    /* ========================================================
+       HEADERS
+       ======================================================== */
 
     .main-title {
         font-size: 32px;
@@ -83,6 +97,11 @@ st.markdown(
         margin-top: 20px;
         margin-bottom: 10px;
     }
+
+
+    /* ========================================================
+       KPI CARDS
+       ======================================================== */
 
     .kpi-card {
         background: white;
@@ -112,6 +131,11 @@ st.markdown(
         margin-top: 5px;
     }
 
+
+    /* ========================================================
+       GRAPH INFO
+       ======================================================== */
+
     .graph-info {
         background: white;
         border: 1px solid #e5e7eb;
@@ -128,6 +152,11 @@ st.markdown(
         margin-bottom: 7px;
         font-size: 13px;
     }
+
+
+    /* ========================================================
+       RECOMMENDATION
+       ======================================================== */
 
     .recommendation-card {
         background: white;
@@ -165,6 +194,11 @@ st.markdown(
         font-size: 13px;
     }
 
+
+    /* ========================================================
+       STATUS
+       ======================================================== */
+
     .status-online {
         color: #16a34a;
         font-weight: 600;
@@ -175,10 +209,20 @@ st.markdown(
         font-weight: 600;
     }
 
+
+    /* ========================================================
+       BUTTONS
+       ======================================================== */
+
     .stButton > button {
         border-radius: 7px;
         font-weight: 600;
     }
+
+
+    /* ========================================================
+       CREATE OPPORTUNITY
+       ======================================================== */
 
     .create-summary {
         background: white;
@@ -210,16 +254,21 @@ st.markdown(
 # HELPER FUNCTIONS
 # ============================================================
 
+
 def api_get(endpoint, timeout=10):
-    """Safe GET request to FastAPI."""
+    """
+    Safe GET request to FastAPI.
+    """
 
     try:
+
         response = requests.get(
             f"{API}{endpoint}",
             timeout=timeout
         )
 
         if response.status_code != 200:
+
             try:
                 detail = response.json()
             except Exception:
@@ -233,30 +282,33 @@ def api_get(endpoint, timeout=10):
         return response.json(), None
 
     except requests.exceptions.ConnectionError:
+
         return (
             None,
             f"Cannot connect to FastAPI at {API}"
         )
 
     except requests.exceptions.Timeout:
+
         return (
             None,
             "Request timed out."
         )
 
     except Exception as exc:
+
         return (
             None,
             str(exc)
         )
 
 
-def api_post(endpoint, payload=None, timeout=15):
-    """Safe POST request to FastAPI."""
+def api_post(endpoint, payload, timeout=15):
+    """
+    Safe POST request to FastAPI.
+    """
 
     try:
-        if payload is None:
-            payload = {}
 
         response = requests.post(
             f"{API}{endpoint}",
@@ -265,6 +317,7 @@ def api_post(endpoint, payload=None, timeout=15):
         )
 
         if response.status_code not in [200, 201]:
+
             try:
                 detail = response.json()
             except Exception:
@@ -278,18 +331,21 @@ def api_post(endpoint, payload=None, timeout=15):
         return response.json(), None
 
     except requests.exceptions.ConnectionError:
+
         return (
             None,
             f"Cannot connect to FastAPI at {API}"
         )
 
     except requests.exceptions.Timeout:
+
         return (
             None,
             "Request timed out."
         )
 
     except Exception as exc:
+
         return (
             None,
             str(exc)
@@ -297,7 +353,9 @@ def api_post(endpoint, payload=None, timeout=15):
 
 
 def format_currency(value):
+
     try:
+
         value = float(value)
 
         if value >= 10_000_000:
@@ -309,11 +367,14 @@ def format_currency(value):
         return f"₹{value:,.0f}"
 
     except Exception:
+
         return "₹0"
 
 
 def safe_float(value, default=0):
+
     try:
+
         if value is None:
             return default
 
@@ -325,6 +386,7 @@ def safe_float(value, default=0):
         return value
 
     except Exception:
+
         return default
 
 
@@ -349,7 +411,7 @@ def node_display_name(node):
 
         value = properties.get(key)
 
-        if value not in [None, ""]:
+        if value not in [None, ""] and str(value).strip().lower() not in {"none", "null", "nan"}:
             return str(value)
 
     return str(
@@ -361,61 +423,15 @@ def node_display_name(node):
 
 
 def node_label(node):
-
-    labels = node.get(
-        "labels",
-        []
-    )
-
-    if labels:
-        return labels[0]
-
+    """Return a safe display label for Neo4j nodes across API response shapes."""
+    labels = node.get("labels", [])
+    if isinstance(labels, str):
+        labels = [labels]
+    if isinstance(labels, (list, tuple)):
+        clean_labels = [str(label).strip() for label in labels if label not in (None, "")]
+        if clean_labels:
+            return clean_labels[0]
     return "Node"
-
-
-def normalize_employees(response):
-    """
-    Handles both:
-
-    [
-        {"id": "...", "name": "..."}
-    ]
-
-    and:
-
-    {
-        "employees": [
-            {"id": "...", "name": "..."}
-        ]
-    }
-    """
-
-    if isinstance(response, list):
-        return response
-
-    if isinstance(response, dict):
-        employees = response.get("employees", [])
-
-        if isinstance(employees, list):
-            return employees
-
-    return []
-
-
-def get_employee_name(employee):
-    return (
-        employee.get("name")
-        or employee.get("employee_name")
-        or employee.get("id")
-        or "Unknown"
-    )
-
-
-def get_employee_id(employee):
-    return (
-        employee.get("id")
-        or employee.get("employee_id")
-    )
 
 
 # ============================================================
@@ -437,70 +453,15 @@ neo4j_online = (
 # ============================================================
 
 with st.sidebar:
-
     st.markdown(
         """
-        <div style="font-size:24px;font-weight:700;">
-            ◈ CRM Analytics
-        </div>
-
-        <div style="font-size:12px;color:#9ca3af;margin-top:4px;">
-            Graph Intelligence Platform
+        <div style="display:flex;align-items:center;gap:10px;font-size:24px;font-weight:750;white-space:nowrap;">
+            <span style="font-size:27px;color:#93c5fd;">◈</span>
+            <span>CRM Analytics</span>
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
-
-    st.divider()
-
-    st.markdown("### Platform")
-
-    if neo4j_online:
-
-        st.markdown(
-            '<span class="status-online">● Neo4j Online</span>',
-            unsafe_allow_html=True
-        )
-
-    else:
-
-        st.markdown(
-            '<span class="status-offline">● Neo4j Offline</span>',
-            unsafe_allow_html=True
-        )
-
-    st.caption(
-        f"API: {API}"
-    )
-
-    st.divider()
-
-    st.markdown("### Architecture")
-
-    st.caption("Graph Database")
-    st.write("Neo4j")
-
-    st.caption("API Layer")
-    st.write("FastAPI")
-
-    st.caption("Analytics UI")
-    st.write("Streamlit")
-
-    st.caption("Recommendation Engine")
-    st.write("Graph + Weighted Scoring")
-
-    st.divider()
-
-    st.markdown("### Recommendation Model")
-
-    st.caption("Domain Similarity")
-    st.write("50%")
-
-    st.caption("Peer Success")
-    st.write("30%")
-
-    st.caption("Historical Performance")
-    st.write("20%")
 
 
 # ============================================================
@@ -529,14 +490,13 @@ except Exception:
 # LOAD EMPLOYEES
 # ============================================================
 
-employees_response, employees_error = api_get(
+employees, employees_error = api_get(
     "/employees",
     timeout=10
 )
 
-employees = normalize_employees(
-    employees_response
-)
+if employees is None:
+    employees = []
 
 
 # ============================================================
@@ -651,6 +611,7 @@ else:
 
 k1, k2, k3, k4, k5 = st.columns(5)
 
+
 with k1:
 
     st.markdown(
@@ -665,6 +626,7 @@ with k1:
         """,
         unsafe_allow_html=True
     )
+
 
 with k2:
 
@@ -683,6 +645,7 @@ with k2:
         unsafe_allow_html=True
     )
 
+
 with k3:
 
     st.markdown(
@@ -700,6 +663,7 @@ with k3:
         unsafe_allow_html=True
     )
 
+
 with k4:
 
     st.markdown(
@@ -716,6 +680,7 @@ with k4:
         """,
         unsafe_allow_html=True
     )
+
 
 with k5:
 
@@ -774,6 +739,7 @@ with tabs[0]:
     else:
 
         left, right = st.columns(2)
+
 
         # ----------------------------------------------------
         # PIPELINE BY DOMAIN
@@ -839,6 +805,7 @@ with tabs[0]:
                     use_container_width=True
                 )
 
+
         # ----------------------------------------------------
         # OPPORTUNITIES BY STAGE
         # ----------------------------------------------------
@@ -879,6 +846,7 @@ with tabs[0]:
                     fig,
                     use_container_width=True
                 )
+
 
         # ----------------------------------------------------
         # OPEN PIPELINE
@@ -937,10 +905,9 @@ with tabs[1]:
     else:
 
         names = {
-            get_employee_name(employee):
-                get_employee_id(employee)
+            employee["name"]:
+                employee["id"]
             for employee in employees
-            if get_employee_id(employee)
         }
 
         selected = st.selectbox(
@@ -961,8 +928,6 @@ with tabs[1]:
             st.error(error)
 
         else:
-
-            performance = performance or {}
 
             a, b, c, d = st.columns(4)
 
@@ -989,10 +954,7 @@ with tabs[1]:
                     "Opportunities",
                     performance.get(
                         "opportunities",
-                        performance.get(
-                            "total_opportunities",
-                            0
-                        )
+                        0
                     )
                 )
 
@@ -1010,12 +972,24 @@ with tabs[1]:
 
             st.divider()
 
-            st.markdown(
-                "#### Performance Details"
-            )
-
-            st.json(
-                performance
+            st.markdown("#### Performance Details")
+            performance_rows = [
+                {"Metric": "Salesperson", "Value": performance.get("employee", selected)},
+                {"Metric": "Employee ID", "Value": performance.get("employee_id", employee_id)},
+                {"Metric": "Wins", "Value": performance.get("wins", 0)},
+                {"Metric": "Losses", "Value": performance.get("losses", 0)},
+                {"Metric": "Open Opportunities", "Value": performance.get("open", 0)},
+                {"Metric": "Total Opportunities", "Value": performance.get("opportunities", 0)},
+                {"Metric": "Win Rate", "Value": f"{safe_float(performance.get('win_rate')):.1%}"},
+                {"Metric": "Revenue Won", "Value": format_currency(performance.get("revenue_won", 0))},
+                {"Metric": "Average Deal Size", "Value": format_currency(performance.get("average_deal_size", 0))},
+            ]
+            st.dataframe(
+                pd.DataFrame(performance_rows),
+                use_container_width=True,
+                hide_index=True,
+                column_config={"Metric": st.column_config.TextColumn("Metric", width="medium"),
+                               "Value": st.column_config.TextColumn("Value", width="large")},
             )
 
 
@@ -1044,10 +1018,9 @@ with tabs[2]:
     else:
 
         names = {
-            get_employee_name(employee):
-                get_employee_id(employee)
+            employee["name"]:
+                employee["id"]
             for employee in employees
-            if get_employee_id(employee)
         }
 
         selected = st.selectbox(
@@ -1069,8 +1042,6 @@ with tabs[2]:
 
         else:
 
-            result = result or {}
-
             recommendations = result.get(
                 "recommendations",
                 []
@@ -1083,76 +1054,29 @@ with tabs[2]:
                 )
 
             else:
-
-                for idx, rec in enumerate(
-                    recommendations,
-                    1
-                ):
-
-                    score = safe_float(
-                        rec.get("score")
-                    )
-
-                    st.markdown(
-                        f"""
-                        <div class="recommendation-card">
-
-                            <div class="recommendation-rank">
-                                #{idx}
-                            </div>
-
-                            <div class="recommendation-name">
-                                {rec.get("domain", "Unknown")}
-                            </div>
-
-                            <div style="margin-top:8px;">
-                                Recommendation confidence:
-                                <b>{score:.0%}</b>
-                            </div>
-
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                    st.progress(
-                        min(
-                            max(
-                                score,
-                                0
-                            ),
-                            1
-                        )
-                    )
-
-                    st.write(
-                        f"Source domain: "
-                        f"**{rec.get('source_domain', 'Unknown')}**"
-                    )
-
-                    reasons = rec.get(
-                        "reason",
-                        []
-                    )
-
-                    if reasons:
-
-                        st.write(
-                            "**Why this domain?**"
-                        )
-
-                        for reason in reasons:
-
-                            st.markdown(
-                                f"""
-                                <div class="reason-card">
-                                    ✓ {reason}
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
-
-                    st.divider()
+                recommendation_rows = []
+                for idx, rec in enumerate(recommendations, 1):
+                    score = safe_float(rec.get("score"))
+                    recommendation_rows.append({
+                        "Rank": idx,
+                        "Recommended Domain": rec.get("domain", "Unknown"),
+                        "Likelihood Score": f"{score:.1%}",
+                        "Related To": rec.get("source_domain", "Unknown"),
+                        "Reason": "; ".join(str(x) for x in (rec.get("reason") or [])),
+                    })
+                st.dataframe(
+                    pd.DataFrame(recommendation_rows),
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Rank": st.column_config.NumberColumn("Rank", format="%d", width="small"),
+                        "Recommended Domain": st.column_config.TextColumn("Recommended Domain", width="medium"),
+                        "Likelihood Score": st.column_config.TextColumn("Likelihood Score", width="small"),
+                        "Related To": st.column_config.TextColumn("Related To", width="medium"),
+                        "Reason": st.column_config.TextColumn("Why it is recommended", width="large"),
+                    },
+                )
+                st.caption("Scores are weighted recommendation scores, not calibrated statistical probabilities.")
 
 
 # ============================================================
@@ -1171,6 +1095,10 @@ with tabs[3]:
         "generate graph-based domain intelligence."
     )
 
+    # ========================================================
+    # FORM
+    # ========================================================
+
     with st.form("create_opportunity_form"):
 
         left, right = st.columns(2)
@@ -1183,19 +1111,19 @@ with tabs[3]:
 
             opportunity_name = st.text_input(
                 "Opportunity Name",
-                placeholder="e.g. Healthcare Payments Platform",
+                placeholder="e.g. Digital Banking Transformation",
                 key="create_opportunity_name"
             )
 
             customer_name = st.text_input(
                 "Customer",
-                placeholder="e.g. HealthPay Technologies",
+                placeholder="e.g. HDFC Bank",
                 key="create_customer_name"
             )
 
             domain_name = st.text_input(
                 "Business Domain",
-                placeholder="e.g. Healthcare Payments",
+                placeholder="e.g. Fintech",
                 key="create_domain_name"
             )
 
@@ -1220,19 +1148,12 @@ with tabs[3]:
 
             for employee in employees:
 
-                employee_name = get_employee_name(
-                    employee
-                )
-
-                employee_id = get_employee_id(
-                    employee
-                )
-
-                if employee_id:
-
-                    salesperson_options[
-                        employee_name
-                    ] = employee_id
+                salesperson_options[
+                    employee.get(
+                        "name",
+                        employee.get("id")
+                    )
+                ] = employee.get("id")
 
             selected_salesperson = st.selectbox(
                 "Salesperson",
@@ -1249,6 +1170,7 @@ with tabs[3]:
             type="primary",
             use_container_width=True
         )
+
 
     # ========================================================
     # CREATE OPPORTUNITY
@@ -1286,28 +1208,16 @@ with tabs[3]:
 
         else:
 
-            clean_opportunity_name = (
-                opportunity_name.strip()
-            )
-
-            clean_customer_name = (
-                customer_name.strip()
-            )
-
-            clean_domain_name = (
-                domain_name.strip()
-            )
-
             payload = {
 
                 "name":
-                    clean_opportunity_name,
+                    opportunity_name.strip(),
 
                 "customer_name":
-                    clean_customer_name,
+                    customer_name.strip(),
 
                 "domain":
-                    clean_domain_name,
+                    domain_name.strip(),
 
                 "value":
                     float(opportunity_value),
@@ -1321,10 +1231,6 @@ with tabs[3]:
             # ------------------------------------------------
             # STEP 1 — CREATE OPPORTUNITY
             # ------------------------------------------------
-
-            st.markdown(
-                "### Step 1 — Creating Opportunity"
-            )
 
             with st.spinner(
                 "Creating opportunity in Neo4j..."
@@ -1345,665 +1251,459 @@ with tabs[3]:
 
             else:
 
-                created = created or {}
-
                 opportunity = created.get(
                     "opportunity",
-                    created
+                    {}
                 )
 
-                opportunity_id = (
-                    opportunity.get("opportunity_id")
-                    or opportunity.get("id")
+                opportunity_id = opportunity.get(
+                    "opportunity_id"
                 )
 
-                if not opportunity_id:
+                st.success(
+                    f"Opportunity {opportunity_id} "
+                    f"created successfully."
+                )
 
-                    st.error(
-                        "Opportunity was created but the API "
-                        "did not return an opportunity ID."
+                # ------------------------------------------------
+                # CREATED OPPORTUNITY SUMMARY
+                # ------------------------------------------------
+
+                c1, c2, c3, c4 = st.columns(4)
+
+                with c1:
+
+                    st.metric(
+                        "Opportunity ID",
+                        opportunity_id
                     )
 
-                    st.json(created)
+                with c2:
+
+                    st.metric(
+                        "Customer",
+                        opportunity.get(
+                            "customer_name",
+                            customer_name
+                        )
+                    )
+
+                with c3:
+
+                    st.metric(
+                        "Domain",
+                        opportunity.get(
+                            "domain",
+                            domain_name
+                        )
+                    )
+
+                with c4:
+
+                    st.metric(
+                        "Value",
+                        format_currency(
+                            opportunity.get(
+                                "opportunity_value",
+                                opportunity_value
+                            )
+                        )
+                    )
+
+                st.divider()
+
+                # ------------------------------------------------
+                # STEP 2 — DOMAIN SIMILARITY
+                # ------------------------------------------------
+
+                st.markdown(
+                    "#### Domain Intelligence"
+                )
+
+                st.caption(
+                    "Generating semantic similarity relationships "
+                    "for the new domain."
+                )
+
+                with st.spinner(
+                    "Calculating domain similarity..."
+                ):
+
+                    similarity_result, similarity_error = api_post(
+                         f"/domains/{domain_name.strip()}/similarity",
+                        {},
+                         timeout=60
+                )
+
+                if similarity_error:
+
+                    st.warning(
+                        "Opportunity was created, but domain "
+                        "similarity could not be generated."
+                    )
+
+                    st.code(
+                        similarity_error
+                    )
 
                 else:
 
+                    relationships = similarity_result.get(
+                        "relationships",
+                        []
+                    )
+
+                    relationships_created = (
+                        similarity_result.get(
+                            "relationships_created",
+                            len(relationships)
+                        )
+                    )
+
                     st.success(
-                        f"Opportunity {opportunity_id} "
-                        f"created successfully."
+                        f"{relationships_created} domain similarity "
+                        f"relationships generated."
                     )
 
-                    # ------------------------------------------------
-                    # CREATED OPPORTUNITY SUMMARY
-                    # ------------------------------------------------
+                    if relationships:
 
-                    c1, c2, c3, c4 = st.columns(4)
+                        similarity_rows = []
 
-                    with c1:
+                        for relationship in relationships:
 
-                        st.metric(
-                            "Opportunity ID",
-                            opportunity_id
-                        )
+                            similarity_rows.append(
+                                {
+                                    "Source Domain":
+                                        relationship.get(
+                                            "source"
+                                        ),
 
-                    with c2:
+                                    "Target Domain":
+                                        relationship.get(
+                                            "target"
+                                        ),
 
-                        st.metric(
-                            "Customer",
-                            opportunity.get(
-                                "customer_name",
-                                clean_customer_name
+                                    "Similarity":
+                                        f"{safe_float(
+                                            relationship.get(
+                                                "score"
+                                            )
+                                        ):.1%}",
+
+                                    "Method":
+                                        relationship.get(
+                                            "method",
+                                            "semantic_embedding"
+                                        )
+                                }
                             )
-                        )
 
-                    with c3:
-
-                        st.metric(
-                            "Domain",
-                            opportunity.get(
-                                "domain",
-                                clean_domain_name
-                            )
-                        )
-
-                    with c4:
-
-                        st.metric(
-                            "Value",
-                            format_currency(
-                                opportunity.get(
-                                    "opportunity_value",
-                                    opportunity.get(
-                                        "value",
-                                        opportunity_value
-                                    )
-                                )
-                            )
-                        )
-
-                    st.divider()
-
-                    # ------------------------------------------------
-                    # STEP 2 — DOMAIN SIMILARITY
-                    # ------------------------------------------------
-
-                    st.markdown(
-                        "### Step 2 — Domain Intelligence"
-                    )
-
-                    st.caption(
-                        "The new domain is passed through the semantic "
-                        "similarity engine. Existing domains are compared "
-                        "using embeddings and relevant SIMILAR_TO "
-                        "relationships are created in Neo4j."
-                    )
-
-                    with st.spinner(
-                        "Calculating domain similarity..."
-                    ):
-
-                        # IMPORTANT:
-                        # This is POST /domains/{domain}/similarity
-                        # NOT /domains/{domain}/similar
-                        similarity_result, similarity_error = api_post(
-                            f"/domains/{clean_domain_name}/similarity",
-                            {},
-                            timeout=60
-                        )
-
-                    if similarity_error:
-
-                        st.warning(
-                            "Opportunity was created, but domain "
-                            "similarity could not be generated."
-                        )
-
-                        st.code(
-                            similarity_error
+                        st.dataframe(
+                            pd.DataFrame(
+                                similarity_rows
+                            ),
+                            use_container_width=True,
+                            hide_index=True
                         )
 
                     else:
 
-                        similarity_result = (
-                            similarity_result or {}
+                        st.info(
+                            "No similar domains crossed the "
+                            "configured similarity threshold."
                         )
 
-                        relationships = similarity_result.get(
-                            "relationships",
+                    # ------------------------------------------------
+                    # SHOW STORED SIMILAR DOMAINS FROM NEO4J
+                    # ------------------------------------------------
+
+                    similar_domains, similar_error = api_get(
+                        f"/domains/{domain_name.strip()}/similar",
+                        timeout=20
+                    )
+
+                    if not similar_error and similar_domains:
+
+                        similar_list = similar_domains.get(
+                            "similar_domains",
                             []
                         )
 
-                        relationships_created = (
-                            similarity_result.get(
-                                "relationships_created",
-                                len(relationships)
+                        if similar_list:
+
+                            st.markdown(
+                                "#### Similar Domains in Neo4j"
                             )
-                        )
 
-                        st.success(
-                            f"{relationships_created} domain similarity "
-                            f"relationships generated."
-                        )
+                            similar_rows = []
 
-                        if relationships:
+                            for item in similar_list:
 
-                            similarity_rows = []
-
-                            for relationship in relationships:
-
-                                similarity_rows.append(
+                                similar_rows.append(
                                     {
-                                        "Source Domain":
-                                            relationship.get(
-                                                "source",
-                                                relationship.get(
-                                                    "source_domain",
-                                                    ""
-                                                )
-                                            ),
-
-                                        "Target Domain":
-                                            relationship.get(
-                                                "target",
-                                                relationship.get(
-                                                    "target_domain",
-                                                    ""
-                                                )
+                                        "Domain":
+                                            item.get(
+                                                "target_domain",
+                                                ""
                                             ),
 
                                         "Similarity":
                                             f"{safe_float(
-                                                relationship.get(
+                                                item.get(
                                                     "score",
-                                                    relationship.get(
-                                                        "similarity",
-                                                        0
-                                                    )
+                                                    0
                                                 )
-                                            ):.1%}",
-
-                                        "Method":
-                                            relationship.get(
-                                                "method",
-                                                "semantic_embedding"
-                                            )
+                                            ):.1%}"
                                     }
                                 )
 
-                            st.dataframe(
-                                pd.DataFrame(
-                                    similarity_rows
-                                ),
-                                use_container_width=True,
-                                hide_index=True
-                            )
-
-                        else:
-
-                            st.info(
-                                "No similar domains crossed the "
-                                "configured similarity threshold."
-                            )
-
-                        # ------------------------------------------------
-                        # SHOW EXISTING SIMILAR DOMAINS
-                        # ------------------------------------------------
-
-                        similar_domains, similar_error = api_get(
-                            f"/domains/{clean_domain_name}/similar",
-                            timeout=20
-                        )
-
-                        if not similar_error and similar_domains:
-
-                            similar_list = (
-                                similar_domains.get(
-                                    "similar_domains",
-                                    []
-                                )
-                            )
-
-                            if similar_list:
-
-                                st.markdown(
-                                    "#### Similar Domains in Neo4j"
-                                )
-
-                                similar_rows = []
-
-                                for item in similar_list:
-
-                                    if isinstance(item, dict):
-
-                                        similar_rows.append(
-                                            {
-                                                "Domain":
-                                                    item.get(
-                                                        "domain",
-                                                        item.get(
-                                                            "name",
-                                                            item.get(
-                                                                "similar_domain",
-                                                                ""
-                                                            )
-                                                        )
-                                                    ),
-
-                                                "Similarity":
-                                                    f"{safe_float(
-                                                        item.get(
-                                                            "score",
-                                                            item.get(
-                                                                "similarity",
-                                                                0
-                                                            )
-                                                        )
-                                                    ):.1%}"
-                                            }
-                                        )
-
-                                if similar_rows:
-
-                                    st.dataframe(
-                                        pd.DataFrame(
-                                            similar_rows
-                                        ),
-                                        use_container_width=True,
-                                        hide_index=True
-                                    )
-
-                    # ------------------------------------------------
-                    # STEP 3 — SALESPERSON RECOMMENDATION
-                    # ------------------------------------------------
-
-                    if selected_salesperson == "Auto Recommend":
-
-                        st.divider()
-
-                        st.markdown(
-                            "### Step 3 — Salesperson Recommendation"
-                        )
-
-                        st.caption(
-                            "Salespeople are ranked using:"
-                        )
-
-                        st.info(
-                            "50% Domain Similarity + "
-                            "30% Peer Success + "
-                            "20% Historical Performance"
-                        )
-
-                        with st.spinner(
-                            "Ranking salespeople using graph intelligence..."
-                        ):
-
-                            ranking, ranking_error = api_get(
-                                f"/recommendations/opportunities/"
-                                f"{opportunity_id}/salespeople",
-                                timeout=30
-                            )
-
-                        if ranking_error:
-
-                            st.warning(
-                                "Opportunity was created successfully, "
-                                "but salesperson recommendation failed."
-                            )
-
-                            st.code(
-                                ranking_error
-                            )
-
-                        else:
-
-                            ranking = ranking or {}
-
-                            salespeople = ranking.get(
-                                "salespeople",
-                                []
-                            )
-
-                            if salespeople:
-
-                                top = salespeople[0]
-
-                                top_name = top.get(
-                                    "employee_name",
-                                    "Unknown"
-                                )
-
-                                top_score = safe_float(
-                                    top.get(
-                                        "probability_percent"
-                                    )
-                                )
-
-                                st.success(
-                                    f"Recommended Salesperson: "
-                                    f"**{top_name}** — "
-                                    f"{top_score:.1f}%"
-                                )
-
-                                # ------------------------------------
-                                # SCORE BREAKDOWN
-                                # ------------------------------------
-
-                                c1, c2, c3 = st.columns(3)
-
-                                with c1:
-
-                                    st.metric(
-                                        "Domain Similarity",
-                                        f"{safe_float(
-                                            top.get(
-                                                "domain_similarity"
-                                            )
-                                        ):.0%}"
-                                    )
-
-                                    st.caption(
-                                        "Weight: 50%"
-                                    )
-
-                                with c2:
-
-                                    st.metric(
-                                        "Peer Success",
-                                        f"{safe_float(
-                                            top.get(
-                                                "peer_success"
-                                            )
-                                        ):.0%}"
-                                    )
-
-                                    st.caption(
-                                        "Weight: 30%"
-                                    )
-
-                                with c3:
-
-                                    st.metric(
-                                        "Historical Performance",
-                                        f"{safe_float(
-                                            top.get(
-                                                "historical_performance"
-                                            )
-                                        ):.0%}"
-                                    )
-
-                                    st.caption(
-                                        "Weight: 20%"
-                                    )
-
-                                # ------------------------------------
-                                # SCORE CALCULATION
-                                # ------------------------------------
-
-                                calculated_score = (
-                                    0.50 * safe_float(
-                                        top.get(
-                                            "domain_similarity"
-                                        )
-                                    )
-                                    +
-                                    0.30 * safe_float(
-                                        top.get(
-                                            "peer_success"
-                                        )
-                                    )
-                                    +
-                                    0.20 * safe_float(
-                                        top.get(
-                                            "historical_performance"
-                                        )
-                                    )
-                                )
-
-                                st.progress(
-                                    min(
-                                        max(
-                                            calculated_score,
-                                            0
-                                        ),
-                                        1
-                                    )
-                                )
-
-                                st.caption(
-                                    f"Final graph recommendation score: "
-                                    f"**{calculated_score:.1%}**"
-                                )
-
-                                # ------------------------------------
-                                # RANKING TABLE
-                                # ------------------------------------
-
-                                st.markdown(
-                                    "#### Salesperson Ranking"
-                                )
-
-                                ranking_rows = []
-
-                                for salesperson in salespeople:
-
-                                    ranking_rows.append(
-                                        {
-                                            "Rank":
-                                                salesperson.get(
-                                                    "rank",
-                                                    ""
-                                                ),
-
-                                            "Salesperson":
-                                                salesperson.get(
-                                                    "employee_name",
-                                                    "Unknown"
-                                                ),
-
-                                            "Score":
-                                                f"{safe_float(
-                                                    salesperson.get(
-                                                        "probability_percent"
-                                                    )
-                                                ):.1f}%",
-
-                                            "Domain Similarity":
-                                                f"{safe_float(
-                                                    salesperson.get(
-                                                        "domain_similarity"
-                                                    )
-                                                ):.1%}",
-
-                                            "Peer Success":
-                                                f"{safe_float(
-                                                    salesperson.get(
-                                                        "peer_success"
-                                                    )
-                                                ):.1%}",
-
-                                            "Historical Performance":
-                                                f"{safe_float(
-                                                    salesperson.get(
-                                                        "historical_performance"
-                                                    )
-                                                ):.1%}",
-
-                                            "Wins":
-                                                salesperson.get(
-                                                    "wins",
-                                                    0
-                                                ),
-
-                                            "Opportunities":
-                                                salesperson.get(
-                                                    "total_opportunities",
-                                                    0
-                                                )
-                                        }
-                                    )
+                            if similar_rows:
 
                                 st.dataframe(
                                     pd.DataFrame(
-                                        ranking_rows
+                                        similar_rows
                                     ),
                                     use_container_width=True,
                                     hide_index=True
                                 )
 
-                                # ------------------------------------
-                                # EXPLAINABILITY
-                                # ------------------------------------
-
-                                st.markdown(
-                                    "#### Why was this salesperson recommended?"
+                                st.caption(
+                                    "Similarity method: Semantic Embedding • "
+                                    "Model: all-MiniLM-L6-v2"
                                 )
 
-                                reasons = top.get(
-                                    "reasons",
-                                    []
-                                )
+                # ------------------------------------------------
+                # STEP 3 — SALESPERSON RECOMMENDATION
+                # ------------------------------------------------
 
-                                if reasons:
+                if selected_salesperson == "Auto Recommend":
 
-                                    for reason in reasons:
+                    st.divider()
 
-                                        st.markdown(
-                                            f"""
-                                            <div class="reason-card">
-                                                ✓ {reason}
-                                            </div>
-                                            """,
-                                            unsafe_allow_html=True
-                                        )
+                    st.markdown(
+                        "#### Recommended Salesperson"
+                    )
 
-                                # ------------------------------------
-                                # DOMAIN EVIDENCE
-                                # ------------------------------------
+                    with st.spinner(
+                        "Ranking salespeople using graph intelligence..."
+                    ):
 
-                                domain_evidence = (
-                                    top.get(
-                                        "domain_evidence",
-                                        []
-                                    )
-                                    or []
-                                )
+                        ranking, ranking_error = api_get(
+                            f"/recommendations/opportunities/"
+                            f"{opportunity_id}/salespeople",
+                            timeout=30
+                        )
 
-                                if domain_evidence:
+                    if ranking_error:
 
-                                    st.markdown(
-                                        "#### Domain Evidence"
-                                    )
+                        st.warning(
+                            "Opportunity created successfully, "
+                            "but salesperson recommendation failed."
+                        )
 
-                                    evidence_rows = []
-
-                                    for evidence in domain_evidence:
-
-                                        evidence_rows.append(
-                                            {
-                                                "Domain":
-                                                    evidence.get(
-                                                        "domain",
-                                                        ""
-                                                    ),
-
-                                                "Outcome":
-                                                    evidence.get(
-                                                        "outcome",
-                                                        ""
-                                                    ),
-
-                                                "Similarity":
-                                                    f"{safe_float(
-                                                        evidence.get(
-                                                            "similarity"
-                                                        )
-                                                    ):.1%}"
-                                            }
-                                        )
-
-                                    st.dataframe(
-                                        pd.DataFrame(
-                                            evidence_rows
-                                        ),
-                                        use_container_width=True,
-                                        hide_index=True
-                                    )
-
-                                # ------------------------------------
-                                # PEER EVIDENCE
-                                # ------------------------------------
-
-                                peer_evidence = (
-                                    top.get(
-                                        "peer_evidence",
-                                        []
-                                    )
-                                    or []
-                                )
-
-                                if peer_evidence:
-
-                                    st.markdown(
-                                        "#### Peer Evidence"
-                                    )
-
-                                    peer_rows = []
-
-                                    for evidence in peer_evidence:
-
-                                        peer_rows.append(
-                                            {
-                                                "Salesperson":
-                                                    evidence.get(
-                                                        "employee",
-                                                        ""
-                                                    ),
-
-                                                "Domain":
-                                                    evidence.get(
-                                                        "domain",
-                                                        ""
-                                                    ),
-
-                                                "Outcome":
-                                                    evidence.get(
-                                                        "outcome",
-                                                        ""
-                                                    ),
-
-                                                "Similarity":
-                                                    f"{safe_float(
-                                                        evidence.get(
-                                                            "similarity"
-                                                        )
-                                                    ):.1%}"
-                                            }
-                                        )
-
-                                    st.dataframe(
-                                        pd.DataFrame(
-                                            peer_rows
-                                        ),
-                                        use_container_width=True,
-                                        hide_index=True
-                                    )
-
-                            else:
-
-                                st.info(
-                                    "No salesperson recommendations "
-                                    "were generated."
-                                )
+                        st.code(
+                            ranking_error
+                        )
 
                     else:
 
-                        st.divider()
-
-                        st.success(
-                            f"Opportunity assigned to "
-                            f"**{selected_salesperson}**."
+                        salespeople = ranking.get(
+                            "salespeople",
+                            []
                         )
+
+                        if salespeople:
+
+                            top = salespeople[0]
+
+                            top_name = top.get(
+                                "employee_name",
+                                "Unknown"
+                            )
+
+                            top_score = safe_float(
+                                top.get(
+                                    "likelihood_score_percent"
+                                )
+                            )
+
+                            st.success(
+                                f"Recommended Salesperson: "
+                                f"**{top_name}** — "
+                                f"{top_score:.1f}%"
+                            )
+
+                            # ------------------------------------
+                            # SCORE BREAKDOWN
+                            # ------------------------------------
+
+                            c1, c2, c3 = st.columns(3)
+
+                            with c1:
+
+                                st.metric(
+                                    "Domain Similarity",
+                                    f"{safe_float(
+                                        top.get(
+                                            "domain_similarity"
+                                        )
+                                    ):.0%}"
+                                )
+
+                                st.caption(
+                                    "Weight: 50%"
+                                )
+
+                            with c2:
+
+                                st.metric(
+                                    "Peer Success",
+                                    f"{safe_float(
+                                        top.get(
+                                            "peer_success"
+                                        )
+                                    ):.0%}"
+                                )
+
+                                st.caption(
+                                    "Weight: 30%"
+                                )
+
+                            with c3:
+
+                                st.metric(
+                                    "Historical Performance",
+                                    f"{safe_float(
+                                        top.get(
+                                            "historical_performance"
+                                        )
+                                    ):.0%}"
+                                )
+
+                                st.caption(
+                                    "Weight: 20%"
+                                )
+
+                            # ------------------------------------
+                            # RANKING TABLE
+                            # ------------------------------------
+
+                            st.markdown(
+                                "##### Salesperson Ranking"
+                            )
+
+                            ranking_rows = []
+
+                            for salesperson in salespeople:
+
+                                ranking_rows.append(
+                                    {
+                                        "Rank":
+                                            salesperson.get(
+                                                "rank"
+                                            ),
+
+                                        "Salesperson":
+                                            salesperson.get(
+                                                "employee_name"
+                                            ),
+
+                                        "Score":
+                                            f"{safe_float(
+                                                salesperson.get(
+                                                    "likelihood_score_percent"
+                                                )
+                                            ):.1f}%",
+
+                                        "Domain Similarity":
+                                            f"{safe_float(
+                                                salesperson.get(
+                                                    "domain_similarity"
+                                                )
+                                            ):.1%}",
+
+                                        "Peer Success":
+                                            f"{safe_float(
+                                                salesperson.get(
+                                                    "peer_success"
+                                                )
+                                            ):.1%}",
+
+                                        "Historical Performance":
+                                            f"{safe_float(
+                                                salesperson.get(
+                                                    "historical_performance"
+                                                )
+                                            ):.1%}"
+                                    }
+                                )
+
+                            st.dataframe(
+                                pd.DataFrame(
+                                    ranking_rows
+                                ),
+                                use_container_width=True,
+                                hide_index=True
+                            )
+
+                            # ------------------------------------
+                            # EXPLAINABILITY
+                            # ------------------------------------
+
+                            if top.get("cold_start", False):
+
+
+                                st.info(
+
+
+                                    "Cold-start domain: no historical domain-specific "
+
+
+                                    "evidence was found. The company-wide historical "
+
+
+                                    "baseline was used for peer success."
+
+
+                                )
+
+
+
+                            reasons = top.get(
+
+
+                                "reasons",
+
+
+                                []
+
+
+                            )
+
+
+
+                            if reasons:
+
+                                st.markdown(
+                                    "##### Why this salesperson?"
+                                )
+
+                                for reason in reasons:
+                                    st.markdown(f"- ✓ {reason}")
+
+                        else:
+
+                            st.info(
+                                "No salesperson recommendations "
+                                "were generated."
+                            )
+
+                else:
+
+                    st.info(
+                        f"Opportunity assigned to "
+                        f"**{selected_salesperson}**."
+                    )
 
 
 # ============================================================
@@ -2018,7 +1718,7 @@ with tabs[4]:
     )
 
     st.caption(
-        "Select an open opportunity to see conversion probability "
+        "Select an open opportunity to see likelihood score "
         "and graph-based salesperson ranking."
     )
 
@@ -2043,6 +1743,7 @@ with tabs[4]:
 
             opportunities = pd.DataFrame()
 
+
         if opportunities.empty:
 
             st.info(
@@ -2050,6 +1751,10 @@ with tabs[4]:
             )
 
         else:
+
+            # ------------------------------------------------
+            # OPPORTUNITY SELECTOR
+            # ------------------------------------------------
 
             opportunity_options = {}
 
@@ -2073,6 +1778,7 @@ with tabs[4]:
                     f"{opportunity_id} — {opportunity_name}"
                 ] = opportunity_id
 
+
             selected_label = st.selectbox(
                 "Opportunity",
                 list(
@@ -2085,41 +1791,26 @@ with tabs[4]:
                 selected_label
             ]
 
+
             row = opportunities[
                 opportunities["opportunity_id"]
                 .astype(str)
                 == str(selected_opp)
             ].iloc[0]
 
+
             # ------------------------------------------------
             # OPPORTUNITY HEADER
             # ------------------------------------------------
 
-            st.markdown(
-                f"""
-                <div class="graph-info">
-
-                    <h3>
-                        {row.get("opportunity_name", selected_opp)}
-                    </h3>
-
-                    <b>Opportunity ID:</b>
-                    {selected_opp}
-
-                    <br><br>
-
-                    <b>Customer:</b>
-                    {row.get("customer_name", "Unknown")}
-
-                    <br>
-
-                    <b>Domain:</b>
-                    {row.get("domain", "Unknown")}
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            header_a, header_b, header_c = st.columns([2, 1, 1])
+            with header_a:
+                st.markdown(f"### {row.get('opportunity_name', selected_opp)}")
+                st.caption(f"Opportunity ID: {selected_opp}")
+            with header_b:
+                st.metric("Customer", str(row.get("customer_name", "Unknown")))
+            with header_c:
+                st.metric("Domain", str(row.get("domain", "Unknown")))
 
             # ------------------------------------------------
             # CONVERSION PREDICTION
@@ -2133,17 +1824,16 @@ with tabs[4]:
             if prediction_error:
 
                 st.warning(
-                    f"Conversion prediction unavailable: "
+                    f"Likelihood score unavailable: "
                     f"{prediction_error}"
                 )
 
             else:
 
-                prediction = prediction or {}
-
                 probability = safe_float(
                     prediction.get(
-                        "probability_percent"
+                        "likelihood_score_percent",
+                        prediction.get("probability_percent", prediction.get("likelihood_score", 0))
                     )
                 )
 
@@ -2152,7 +1842,7 @@ with tabs[4]:
                 with p1:
 
                     st.metric(
-                        "Probability of Conversion",
+                        "Likelihood Score",
                         f"{probability:.1f}%"
                     )
 
@@ -2186,7 +1876,9 @@ with tabs[4]:
                         )
                     )
 
+
             st.divider()
+
 
             # =================================================
             # GRAPH-BASED SALESPERSON RECOMMENDATION
@@ -2203,11 +1895,13 @@ with tabs[4]:
                 "20% Historical Performance"
             )
 
+
             ranking, ranking_error = api_get(
                 f"/recommendations/opportunities/"
                 f"{selected_opp}/salespeople",
                 timeout=20
             )
+
 
             if ranking_error:
 
@@ -2218,12 +1912,11 @@ with tabs[4]:
 
             else:
 
-                ranking = ranking or {}
-
                 salespeople = ranking.get(
                     "salespeople",
                     []
                 )
+
 
                 if not salespeople:
 
@@ -2234,11 +1927,15 @@ with tabs[4]:
 
                 else:
 
+                    # -----------------------------------------
+                    # TOP RECOMMENDATION
+                    # -----------------------------------------
+
                     top = salespeople[0]
 
                     top_score = safe_float(
                         top.get(
-                            "probability_percent"
+                            "likelihood_score_percent"
                         )
                     )
 
@@ -2247,6 +1944,7 @@ with tabs[4]:
                         f"**{top.get('employee_name', 'Unknown')}** "
                         f"— {top_score:.1f}%"
                     )
+
 
                     # -----------------------------------------
                     # SCORE BREAKDOWN
@@ -2257,6 +1955,7 @@ with tabs[4]:
                     )
 
                     c1, c2, c3 = st.columns(3)
+
 
                     with c1:
 
@@ -2275,6 +1974,7 @@ with tabs[4]:
                             "Weight: 50%"
                         )
 
+
                     with c2:
 
                         peer_success = safe_float(
@@ -2292,6 +1992,7 @@ with tabs[4]:
                             "Weight: 30%"
                         )
 
+
                     with c3:
 
                         historical = safe_float(
@@ -2308,6 +2009,11 @@ with tabs[4]:
                         st.caption(
                             "Weight: 20%"
                         )
+
+
+                    # -----------------------------------------
+                    # ACTUAL SCORE CALCULATION
+                    # -----------------------------------------
 
                     calculated_score = (
                         0.50 * domain_similarity
@@ -2328,9 +2034,10 @@ with tabs[4]:
                     )
 
                     st.caption(
-                        f"Final graph recommendation score: "
+                        f"Final graph likelihood score: "
                         f"**{calculated_score:.1%}**"
                     )
+
 
                     # -----------------------------------------
                     # EXPLAINABILITY
@@ -2340,23 +2047,42 @@ with tabs[4]:
                         "##### Why was this salesperson recommended?"
                     )
 
+                    if top.get("cold_start", False):
+
+
+                        st.info(
+
+
+                            "Cold-start domain: no historical domain-specific "
+
+
+                            "evidence was found. The company-wide historical "
+
+
+                            "baseline was used for peer success."
+
+
+                        )
+
+
+
                     reasons = top.get(
+
+
                         "reasons",
+
+
                         []
+
+
                     )
+
+
 
                     if reasons:
 
                         for reason in reasons:
-
-                            st.markdown(
-                                f"""
-                                <div class="reason-card">
-                                    ✓ {reason}
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
+                            st.markdown(f"- ✓ {reason}")
 
                     else:
 
@@ -2365,7 +2091,9 @@ with tabs[4]:
                             "available graph evidence."
                         )
 
+
                     st.divider()
+
 
                     # -----------------------------------------
                     # SALESPERSON RANKING
@@ -2393,31 +2121,31 @@ with tabs[4]:
                                         "Unknown"
                                     ),
 
-                                "Conversion Score":
+                                "Likelihood Score":
                                     f"{safe_float(
                                         salesperson.get(
-                                            "probability_percent"
+                                            'likelihood_score_percent'
                                         )
                                     ):.1f}%",
 
                                 "Domain Similarity":
                                     f"{safe_float(
                                         salesperson.get(
-                                            "domain_similarity"
+                                            'domain_similarity'
                                         )
                                     ):.1%}",
 
                                 "Peer Success":
                                     f"{safe_float(
                                         salesperson.get(
-                                            "peer_success"
+                                            'peer_success'
                                         )
                                     ):.1%}",
 
                                 "Historical Performance":
                                     f"{safe_float(
                                         salesperson.get(
-                                            "historical_performance"
+                                            'historical_performance'
                                         )
                                     ):.1%}",
 
@@ -2435,6 +2163,7 @@ with tabs[4]:
                             }
                         )
 
+
                     ranking_df = pd.DataFrame(
                         ranking_rows
                     )
@@ -2445,8 +2174,9 @@ with tabs[4]:
                         hide_index=True
                     )
 
+
                     # -----------------------------------------
-                    # DETAILED EVIDENCE
+                    # DETAILED EXPLANATION
                     # -----------------------------------------
 
                     st.markdown(
@@ -2465,6 +2195,7 @@ with tabs[4]:
                         key="inspect_salesperson"
                     )
 
+
                     selected_result = next(
                         (
                             x
@@ -2477,9 +2208,11 @@ with tabs[4]:
                         None
                     )
 
+
                     if selected_result:
 
                         left, right = st.columns(2)
+
 
                         with left:
 
@@ -2494,6 +2227,7 @@ with tabs[4]:
                                 )
                                 or []
                             )
+
 
                             if domain_evidence:
 
@@ -2524,10 +2258,10 @@ with tabs[4]:
                                         }
                                     )
 
+
+                                evidence_df = pd.DataFrame(evidence_rows).drop_duplicates()
                                 st.dataframe(
-                                    pd.DataFrame(
-                                        evidence_rows
-                                    ),
+                                    evidence_df,
                                     use_container_width=True,
                                     hide_index=True
                                 )
@@ -2537,6 +2271,7 @@ with tabs[4]:
                                 st.info(
                                     "No domain evidence available."
                                 )
+
 
                         with right:
 
@@ -2551,6 +2286,7 @@ with tabs[4]:
                                 )
                                 or []
                             )
+
 
                             if peer_evidence:
 
@@ -2587,10 +2323,10 @@ with tabs[4]:
                                         }
                                     )
 
+
+                                peer_df = pd.DataFrame(peer_rows).drop_duplicates()
                                 st.dataframe(
-                                    pd.DataFrame(
-                                        peer_rows
-                                    ),
+                                    peer_df,
                                     use_container_width=True,
                                     hide_index=True
                                 )
@@ -2607,555 +2343,352 @@ with tabs[4]:
 # ============================================================
 
 with tabs[5]:
-
-    st.markdown(
-        '<div class="section-header">Graph Explorer</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<div class="section-header">CRM Relationship Graph</div>', unsafe_allow_html=True)
     st.caption(
-        "Explore the actual Neo4j knowledge graph behind "
-        "CRM recommendations and analytics."
+        "The overview combines every salesperson and their connected CRM entities. "
+        "Dashed red links are inferred from shared domains, customers, or wins; they are not persisted Neo4j relationships."
     )
 
     if not neo4j_online:
-
-        st.error(
-            "Neo4j is not currently available."
-        )
-
+        st.error("Neo4j is not currently available.")
     else:
-
-        # ----------------------------------------------------
-        # CONTROLS
-        # ----------------------------------------------------
-
-        c1, c2, c3 = st.columns(
-            [1, 2, 1]
-        )
-
+        c1, c2, c3 = st.columns([1, 1.7, 0.8])
         with c1:
-
             entity_type = st.selectbox(
-                "Entity Type",
-                [
-                    "Employee",
-                    "Customer",
-                    "Opportunity",
-                    "Domain",
-                    "Product",
-                    "Stage",
-                ],
+                "Entity Type", ["Employee", "Customer", "Opportunity", "Domain", "Product", "Stage"],
                 key="graph_entity_type"
             )
-
         with c2:
-
-            default_entity = (
-                "John"
-                if entity_type == "Employee"
-                else ""
-            )
-
-            entity_name = st.text_input(
-                "Entity / ID",
-                value=default_entity,
-                key="graph_entity_name"
-            )
-
+            default_entity = "John" if entity_type == "Employee" else ""
+            entity_name = st.text_input("Entity / ID", value=default_entity, key="graph_entity_name")
         with c3:
+            depth = st.selectbox("Traversal Depth", [1, 2, 3], index=2, key="graph_depth_v2")
 
-            depth = st.selectbox(
-                "Traversal Depth",
-                [1, 2, 3],
-                index=1,
-                key="graph_depth"
-            )
-
-        explore = st.button(
-            "Explore Graph",
-            type="primary",
-            use_container_width=True
+        show_team_graph = st.checkbox(
+            "Show all salespeople and their connected entities", value=True,
+            help="When enabled, the graph merges each employee's Neo4j neighborhood so John, Jake, Sarah, and other employees appear together."
         )
-
-        if (
-            "graph_loaded"
-            not in st.session_state
-        ):
-
+        explore = st.button("Explore Graph", type="primary", use_container_width=True)
+        if "graph_loaded" not in st.session_state:
             st.session_state.graph_loaded = True
             explore = True
 
-        if explore:
-
-            if not entity_name.strip():
-
-                st.warning(
-                    "Enter an entity name or ID."
-                )
-
+        # Rebuild the graph when the user explores, changes graph mode, or changes traversal settings.
+        query_signature = (entity_type, entity_name.strip(), depth, show_team_graph)
+        if explore or st.session_state.get("graph_query_signature") != query_signature:
+            if not entity_name.strip() and not show_team_graph:
+                st.warning("Enter an entity name or ID.")
             else:
+                from urllib.parse import quote
+                combined_nodes = {}
+                combined_relationships = {}
+                query_errors = []
 
-                with st.spinner(
-                    "Querying Neo4j graph..."
-                ):
-
-                    graph, error = api_get(
-                        "/graph"
-                        f"?entity_type={entity_type}"
-                        f"&entity_name={entity_name}"
-                        f"&depth={depth}",
-                        timeout=30
-                    )
-
-                if error:
-
-                    st.error(error)
-
-                elif graph:
-
-                    st.session_state.graph_data = graph
-
-        graph = st.session_state.get(
-            "graph_data"
-        )
-
-        if graph:
-
-            nodes = graph.get(
-                "nodes",
-                []
-            )
-
-            relationships = graph.get(
-                "relationships",
-                []
-            )
-
-            st.markdown(
-                f"""
-                <div class="graph-info">
-
-                    <b>Graph:</b>
-                    {entity_type} → {entity_name}
-
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
-
-                    <b>Nodes:</b>
-                    {len(nodes)}
-
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
-
-                    <b>Relationships:</b>
-                    {len(relationships)}
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            # ------------------------------------------------
-            # NODE POSITIONS
-            # ------------------------------------------------
-
-            node_ids = [
-                node["id"]
-                for node in nodes
-            ]
-
-            node_index = {
-                node_id: idx
-                for idx, node_id
-                in enumerate(node_ids)
-            }
-
-            count = len(nodes)
-
-            if count > 0:
-
-                angles = np.linspace(
-                    0,
-                    2 * np.pi,
-                    count,
-                    endpoint=False
-                )
-
-                radius = 10
-
-                positions = {
-
-                    node["id"]: (
-
-                        radius * np.cos(
-                            angles[idx]
-                        ),
-
-                        radius * np.sin(
-                            angles[idx]
-                        )
-                    )
-
-                    for idx, node
-                    in enumerate(nodes)
-                }
-
-            else:
-
-                positions = {}
-
-            # ------------------------------------------------
-            # GRAPH FIGURE
-            # ------------------------------------------------
-
-            fig = go.Figure()
-
-            # ------------------------------------------------
-            # EDGES
-            # ------------------------------------------------
-
-            for relationship in relationships:
-
-                source = relationship.get(
-                    "source"
-                )
-
-                target = relationship.get(
-                    "target"
-                )
-
-                if (
-                    source not in positions
-                    or target not in positions
-                ):
-
-                    continue
-
-                x0, y0 = positions[source]
-                x1, y1 = positions[target]
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=[x0, x1],
-                        y=[y0, y1],
-                        mode="lines",
-                        line=dict(
-                            width=1
-                        ),
-                        hoverinfo="none",
-                        showlegend=False,
-                    )
-                )
-
-                xm = (
-                    x0 + x1
-                ) / 2
-
-                ym = (
-                    y0 + y1
-                ) / 2
-
-                fig.add_annotation(
-                    x=xm,
-                    y=ym,
-                    text=relationship.get(
-                        "label",
-                        ""
-                    ),
-                    showarrow=False,
-                    font=dict(
-                        size=9
-                    )
-                )
-
-            # ------------------------------------------------
-            # NODE GROUPS
-            # ------------------------------------------------
-
-            for label in set(
-                node_label(node)
-                for node in nodes
-            ):
-
-                group = [
-                    node
-                    for node in nodes
-                    if node_label(node) == label
-                ]
-
-                x_values = [
-                    positions[
-                        node["id"]
-                    ][0]
-                    for node in group
-                ]
-
-                y_values = [
-                    positions[
-                        node["id"]
-                    ][1]
-                    for node in group
-                ]
-
-                text_values = [
-                    node_display_name(node)
-                    for node in group
-                ]
-
-                hover_values = []
-
-                for node in group:
-
-                    properties = node.get(
-                        "properties",
-                        {}
-                    )
-
-                    hover_text = (
-                        f"<b>{node_display_name(node)}</b>"
-                        f"<br>Type: {label}"
-                    )
-
-                    for key, value in properties.items():
-
-                        if value is None:
+                def merge_graph_response(response):
+                    if not isinstance(response, dict):
+                        return
+                    for node in response.get("nodes", []) or []:
+                        node_id = node.get("id")
+                        if node_id is not None:
+                            combined_nodes[str(node_id)] = node
+                    for rel in response.get("relationships", []) or []:
+                        source = rel.get("source")
+                        target = rel.get("target")
+                        if source is None or target is None:
                             continue
+                        label = str(rel.get("label", rel.get("type", "RELATED_TO")))
+                        key = (str(source), str(target), label)
+                        combined_relationships[key] = {
+                            **rel, "source": str(source), "target": str(target), "label": label
+                        }
 
-                        hover_text += (
-                            f"<br>{key}: {value}"
-                        )
-
-                    hover_values.append(
-                        hover_text
-                    )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=x_values,
-                        y=y_values,
-                        mode="markers+text",
-                        text=text_values,
-                        textposition="top center",
-                        hovertext=hover_values,
-                        hoverinfo="text",
-                        marker=dict(
-                            size=24,
-                            line=dict(
-                                width=1
-                            ),
-                        ),
-                        name=label,
-                    )
-                )
-
-            fig.update_layout(
-                height=700,
-                showlegend=True,
-                hovermode="closest",
-                plot_bgcolor="white",
-                paper_bgcolor="white",
-                margin=dict(
-                    l=20,
-                    r=20,
-                    t=20,
-                    b=20,
-                ),
-                xaxis=dict(
-                    showgrid=False,
-                    zeroline=False,
-                    showticklabels=False,
-                ),
-                yaxis=dict(
-                    showgrid=False,
-                    zeroline=False,
-                    showticklabels=False,
-                    scaleanchor="x",
-                    scaleratio=1,
-                ),
-            )
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
-
-            # ------------------------------------------------
-            # NODE EXPLORER
-            # ------------------------------------------------
-
-            st.markdown(
-                "#### Graph Entities"
-            )
-
-            node_names = [
-
-                f"{node_label(node)} — "
-                f"{node_display_name(node)}"
-
-                for node in nodes
-
-            ]
-
-            if node_names:
-
-                selected_node_name = st.selectbox(
-                    "Select a node to inspect",
-                    node_names,
-                    key="selected_graph_node"
-                )
-
-                selected_index = node_names.index(
-                    selected_node_name
-                )
-
-                selected_node = nodes[
-                    selected_index
-                ]
-
-                left, right = st.columns(
-                    [1, 2]
-                )
-
-                with left:
-
-                    st.markdown(
-                        f"""
-                        **Type**
-
-                        `{node_label(selected_node)}`
-                        """
-                    )
-
-                    st.markdown(
-                        f"""
-                        **Node ID**
-
-                        `{selected_node.get("id")}`
-                        """
-                    )
-
-                with right:
-
-                    st.markdown(
-                        "**Properties**"
-                    )
-
-                    properties = selected_node.get(
-                        "properties",
-                        {}
-                    )
-
-                    if properties:
-
-                        property_df = pd.DataFrame(
-                            [
-                                {
-                                    "Property": key,
-                                    "Value": value
-                                }
-
-                                for key, value
-                                in properties.items()
-                            ]
-                        )
-
-                        st.dataframe(
-                            property_df,
-                            use_container_width=True,
-                            hide_index=True,
-                        )
-
+                with st.spinner("Building the combined sales-team graph from Neo4j..."):
+                    if show_team_graph:
+                        # /employees is the source of truth, so newly added employees are included automatically.
+                        employee_rows = employees if isinstance(employees, list) else employees.get("employees", []) if isinstance(employees, dict) else []
+                        employee_names = []
+                        for employee in employee_rows:
+                            if not isinstance(employee, dict):
+                                continue
+                            name = employee.get("name") or employee.get("employee_name")
+                            if name and str(name).strip():
+                                employee_names.append(str(name).strip())
+                        # Keep the requested names available as a fallback if the employee endpoint is temporarily incomplete.
+                        if not employee_names:
+                            employee_names = ["John", "Jake", "Sarah"]
+                        if entity_type == "Employee" and entity_name.strip() and entity_name.strip().lower() not in {n.lower() for n in employee_names}:
+                            employee_names.append(entity_name.strip())
+                        seen_names = set()
+                        employee_names = [n for n in employee_names if not (n.lower() in seen_names or seen_names.add(n.lower()))]
+                        for employee_name in employee_names:
+                            response, error = api_get(
+                                f"/graph?entity_type=Employee&entity_name={quote(employee_name)}&depth={depth}", timeout=30
+                            )
+                            if error:
+                                query_errors.append(f"{employee_name}: {error}")
+                            else:
+                                merge_graph_response(response)
+                        # For non-employee selections, add that selected entity's neighborhood to the team graph too.
+                        if entity_type != "Employee" and entity_name.strip():
+                            response, error = api_get(
+                                f"/graph?entity_type={quote(entity_type)}&entity_name={quote(entity_name.strip())}&depth={depth}", timeout=30
+                            )
+                            if error:
+                                query_errors.append(f"Selected entity: {error}")
+                            else:
+                                merge_graph_response(response)
                     else:
-
-                        st.info(
-                            "No properties available."
+                        response, error = api_get(
+                            f"/graph?entity_type={quote(entity_type)}&entity_name={quote(entity_name.strip())}&depth={depth}", timeout=30
                         )
+                        if error:
+                            query_errors.append(error)
+                        else:
+                            merge_graph_response(response)
 
-            # ------------------------------------------------
-            # RELATIONSHIPS
-            # ------------------------------------------------
-
-            st.markdown(
-                "#### Relationships"
-            )
-
-            relationship_rows = []
-
-            for relationship in relationships:
-
-                source_node = next(
-                    (
-                        node
-                        for node in nodes
-                        if node["id"]
-                        ==
-                        relationship.get(
-                            "source"
-                        )
-                    ),
-                    None
-                )
-
-                target_node = next(
-                    (
-                        node
-                        for node in nodes
-                        if node["id"]
-                        ==
-                        relationship.get(
-                            "target"
-                        )
-                    ),
-                    None
-                )
-
-                if (
-                    source_node is None
-                    or target_node is None
-                ):
-
-                    continue
-
-                relationship_rows.append(
-                    {
-                        "Source":
-                            node_display_name(
-                                source_node
-                            ),
-
-                        "Relationship":
-                            relationship.get(
-                                "label"
-                            ),
-
-                        "Target":
-                            node_display_name(
-                                target_node
-                            ),
+                if combined_nodes:
+                    st.session_state.graph_data = {
+                        "nodes": list(combined_nodes.values()),
+                        "relationships": list(combined_relationships.values()),
+                        "selected_node_ids": [],
                     }
-                )
+                    st.session_state.graph_query = (entity_type, entity_name.strip() or "All salespeople", depth)
+                    st.session_state.graph_query_signature = query_signature
+                    st.session_state.graph_query_errors = query_errors
+                elif query_errors:
+                    st.error("Could not load graph data. " + " | ".join(query_errors[:3]))
+                else:
+                    st.session_state.graph_data = {"nodes": [], "relationships": []}
+                    st.session_state.graph_query = (entity_type, entity_name.strip() or "All salespeople", depth)
+                    st.session_state.graph_query_signature = query_signature
+                    st.session_state.graph_query_errors = query_errors
 
-            if relationship_rows:
-
-                st.dataframe(
-                    pd.DataFrame(
-                        relationship_rows
-                    ),
-                    use_container_width=True,
-                    hide_index=True,
-                )
-
-            else:
-
-                st.info(
-                    "No relationships found."
-                )
-
-        else:
-
-            st.info(
-                "Select an entity and click "
-                "**Explore Graph**."
+        graph = st.session_state.get("graph_data")
+        if graph:
+            nodes = graph.get("nodes", []) or []
+            relationships = graph.get("relationships", []) or []
+            node_by_id = {str(n.get("id")): n for n in nodes if n.get("id") is not None}
+            entity_type_used, entity_name_used, depth_used = st.session_state.get(
+                "graph_query", (entity_type, entity_name, depth)
             )
+
+            actual_edges = []
+            adjacency = {}
+            for rel in relationships:
+                source, target = str(rel.get("source")), str(rel.get("target"))
+                if source not in node_by_id or target not in node_by_id:
+                    continue
+                label = str(rel.get("label", rel.get("type", "RELATED_TO")))
+                actual_edges.append((source, target, label))
+                adjacency.setdefault(source, []).append((target, label))
+                adjacency.setdefault(target, []).append((source, label))
+
+            def has_label(node, expected):
+                labels = node.get("labels") or []
+                if isinstance(labels, str):
+                    labels = [labels]
+                if not isinstance(labels, (list, tuple, set)):
+                    return False
+                return expected.lower() in [str(x).strip().lower() for x in labels if x not in (None, "")]
+
+            employee_nodes = {nid: node for nid, node in node_by_id.items() if has_label(node, "Employee")}
+            domain_nodes = {nid: node for nid, node in node_by_id.items() if has_label(node, "Domain")}
+            customer_nodes = {nid: node for nid, node in node_by_id.items() if has_label(node, "Customer")}
+            opportunity_nodes = {nid: node for nid, node in node_by_id.items() if has_label(node, "Opportunity")}
+
+            employee_evidence = {eid: {"domains": set(), "customers": set(), "won_domains": set(), "won_opportunities": set()} for eid in employee_nodes}
+            for employee_id in employee_nodes:
+                for neighbor_id, rel_label in adjacency.get(employee_id, []):
+                    if neighbor_id not in opportunity_nodes or rel_label.upper() != "OWNS":
+                        continue
+                    opportunity = opportunity_nodes[neighbor_id]
+                    props = opportunity.get("properties", {}) or {}
+                    outcome = str(props.get("outcome", "")).strip().lower()
+                    # Use an explicit conditional instead of a bare conditional expression.
+                    # Streamlit's magic renderer can display the expression result (None)
+                    # for every non-winning opportunity, cluttering the page with "None".
+                    if outcome == "won":
+                        employee_evidence[employee_id]["won_opportunities"].add(neighbor_id)
+                    for second_hop, second_rel in adjacency.get(neighbor_id, []):
+                        if second_hop in domain_nodes and second_rel.upper() == "TARGETS":
+                            employee_evidence[employee_id]["domains"].add(second_hop)
+                            if outcome == "won":
+                                employee_evidence[employee_id]["won_domains"].add(second_hop)
+                        if second_hop in customer_nodes and second_rel.upper() in {"FOR_CUSTOMER", "WITH"}:
+                            employee_evidence[employee_id]["customers"].add(second_hop)
+
+            # Domain-to-domain semantic similarity edges already present in the graph.
+            similar_domain_pairs = set()
+            for source, target, rel_label in actual_edges:
+                if rel_label.upper() == "SIMILAR_TO" and source in domain_nodes and target in domain_nodes:
+                    similar_domain_pairs.add((source, target))
+                    similar_domain_pairs.add((target, source))
+
+            inferred_employee_edges = []
+            employee_ids = sorted(employee_nodes, key=lambda eid: node_display_name(employee_nodes[eid]).lower())
+            for i, first_id in enumerate(employee_ids):
+                for second_id in employee_ids[i + 1:]:
+                    a, b = employee_evidence[first_id], employee_evidence[second_id]
+                    shared_domains = a["domains"] & b["domains"]
+                    shared_customers = a["customers"] & b["customers"]
+                    shared_won_domains = a["won_domains"] & b["won_domains"]
+                    related_domain_pairs = [
+                        (domain_a, domain_b)
+                        for domain_a in a["domains"]
+                        for domain_b in b["domains"]
+                        if (domain_a, domain_b) in similar_domain_pairs
+                    ]
+                    evidence = []
+                    if shared_domains:
+                        evidence.extend(f"Shared domain: {node_display_name(domain_nodes[d])}" for d in sorted(shared_domains))
+                    if shared_customers:
+                        evidence.extend(f"Shared customer: {node_display_name(customer_nodes[c])}" for c in sorted(shared_customers))
+                    if shared_won_domains:
+                        evidence.extend(f"Both have wins in: {node_display_name(domain_nodes[d])}" for d in sorted(shared_won_domains))
+                    if related_domain_pairs:
+                        evidence.extend(
+                            f"Similar domains: {node_display_name(domain_nodes[domain_a])} ↔ {node_display_name(domain_nodes[domain_b])}"
+                            for domain_a, domain_b in related_domain_pairs
+                        )
+                    if evidence:
+                        inferred_employee_edges.append((first_id, second_id, sorted(set(evidence))))
+
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Graph nodes", len(nodes))
+            m2.metric("Neo4j relationships", len(actual_edges))
+            m3.metric("Salespeople in graph", len(employee_nodes))
+            m4.metric("Employee connections", len(inferred_employee_edges))
+            st.caption(f"Graph scope: {'All salespeople + connected entities' if show_team_graph else 'Selected entity neighborhood'} · depth {depth_used}")
+
+            if st.session_state.get("graph_query_errors"):
+                with st.expander("Some employee graph queries could not be loaded"):
+                    for error in st.session_state.graph_query_errors:
+                        st.write(f"- {error}")
+
+            if not nodes:
+                st.info("No graph nodes were returned. Try a different entity or traversal depth.")
+            else:
+                show_all_labels = st.checkbox("Show labels for every node", value=False, key="graph_show_all_labels")
+                type_order = ["Employee", "Opportunity", "Customer", "Domain", "Product", "Stage", "Interaction", "Industry"]
+                grouped = {}
+                for node in nodes:
+                    grouped.setdefault(node_label(node), []).append(node)
+
+                # Employees form the central ring; related entities occupy outer rings by type.
+                positions = {}
+                for label_index, label in enumerate(type_order + [x for x in grouped if x not in type_order]):
+                    group = grouped.get(label, [])
+                    if not group:
+                        continue
+                    n_group = len(group)
+                    if label == "Employee":
+                        ring = 2.3
+                    else:
+                        ring = 5.0 + max(0, type_order.index(label) if label in type_order else label_index) * 1.7
+                    # Stable ordering by display name keeps the graph from reshuffling unnecessarily.
+                    group = sorted(group, key=lambda n: node_display_name(n).lower())
+                    for idx, node in enumerate(group):
+                        angle = (2 * np.pi * idx / max(1, n_group)) + (label_index * 0.19)
+                        positions[str(node["id"])] = (ring * np.cos(angle), ring * np.sin(angle))
+
+                fig = go.Figure()
+                edge_x, edge_y = [], []
+                for source, target, label in actual_edges:
+                    if source not in positions or target not in positions:
+                        continue
+                    x0, y0 = positions[source]; x1, y1 = positions[target]
+                    edge_x.extend([x0, x1, None]); edge_y.extend([y0, y1, None])
+                if edge_x:
+                    fig.add_trace(go.Scatter(
+                        x=edge_x, y=edge_y, mode="lines", name="Neo4j relationship",
+                        line=dict(width=1, color="rgba(110,125,150,0.38)"), hoverinfo="skip", showlegend=True,
+                    ))
+
+                inferred_x, inferred_y = [], []
+                inferred_hover = []
+                for first_id, second_id, evidence in inferred_employee_edges:
+                    if first_id not in positions or second_id not in positions:
+                        continue
+                    x0, y0 = positions[first_id]; x1, y1 = positions[second_id]
+                    inferred_x.extend([x0, x1, None]); inferred_y.extend([y0, y1, None])
+                    inferred_hover.append(f"{node_display_name(employee_nodes[first_id])} ↔ {node_display_name(employee_nodes[second_id])}: " + "; ".join(evidence))
+                if inferred_x:
+                    fig.add_trace(go.Scatter(
+                        x=inferred_x, y=inferred_y, mode="lines", name="Employee-to-employee evidence",
+                        line=dict(width=2.5, color="rgba(220,55,75,0.85)", dash="dash"), hoverinfo="skip", showlegend=True,
+                    ))
+
+                palette = {
+                    "Employee": "#F4A6A6", "Opportunity": "#FFD166", "Domain": "#F08C00",
+                    "Customer": "#7950B2", "Product": "#FA5252", "Stage": "#20A39E",
+                    "Interaction": "#69DB7C", "Industry": "#748FFC",
+                }
+                selected_ids = {str(x) for x in graph.get("selected_node_ids", [])}
+                for label, group in grouped.items():
+                    group = sorted(group, key=lambda n: node_display_name(n).lower())
+                    ids = [str(n["id"]) for n in group]
+                    xs = [positions[nid][0] for nid in ids]
+                    ys = [positions[nid][1] for nid in ids]
+                    display_names = [node_display_name(n) for n in group]
+                    texts = [name if show_all_labels or label == "Employee" or str(n.get("id")) in selected_ids else "" for n, name in zip(group, display_names)]
+                    hover_values = []
+                    for node in group:
+                        props = node.get("properties", {}) or {}
+                        details = [f"<b>{node_display_name(node)}</b>", f"Type: {label}"]
+                        details.extend(f"{k}: {v}" for k, v in props.items() if v is not None)
+                        hover_values.append("<br>".join(details))
+                    fig.add_trace(go.Scatter(
+                        x=xs, y=ys, mode="markers+text", text=texts, textposition="top center",
+                        textfont=dict(size=11 if label == "Employee" else 9), hovertext=hover_values,
+                        hoverinfo="text", name=label,
+                        marker=dict(size=29 if label == "Employee" else 15, color=palette.get(label, "#748FFC"),
+                                    line=dict(width=2 if label == "Employee" else 1, color="white")),
+                    ))
+
+                fig.update_layout(
+                    height=850, showlegend=True, hovermode="closest", plot_bgcolor="white", paper_bgcolor="white",
+                    margin=dict(l=20, r=20, t=25, b=20),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
+                    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, scaleanchor="x", scaleratio=1),
+                )
+                st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "scrollZoom": True})
+
+                st.markdown("#### Employee Connections")
+                if inferred_employee_edges:
+                    connection_rows = []
+                    for first_id, second_id, evidence in inferred_employee_edges:
+                        connection_rows.append({
+                            "Employee": node_display_name(employee_nodes[first_id]),
+                            "Connected employee": node_display_name(employee_nodes[second_id]),
+                            "Connection evidence": "; ".join(evidence),
+                        })
+                    st.dataframe(pd.DataFrame(connection_rows).drop_duplicates(), use_container_width=True, hide_index=True, height=220)
+                else:
+                    st.info("No shared domain, customer, or shared-win evidence was found between the employees in this graph. The employees and their actual Neo4j entity relationships are still shown above.")
+
+                with st.expander("Inspect a graph entity"):
+                    node_options = [f"{node_label(node)} — {node_display_name(node)} [{node.get('id')}]" for node in nodes]
+                    selected_node_option = st.selectbox("Select a node", node_options, key="selected_graph_node")
+                    selected_node = nodes[node_options.index(selected_node_option)]
+                    st.write(f"**Type:** {node_label(selected_node)} · **Node ID:** `{selected_node.get('id')}`")
+                    properties = selected_node.get("properties", {}) or {}
+                    if properties:
+                        st.dataframe(pd.DataFrame([{"Property": key, "Value": value} for key, value in properties.items()]), use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No properties available.")
+
+                with st.expander("Inspect Neo4j relationships"):
+                    relationship_rows = [{
+                        "Source type": node_label(node_by_id[source]), "Source": node_display_name(node_by_id[source]),
+                        "Relationship": label, "Target type": node_label(node_by_id[target]), "Target": node_display_name(node_by_id[target]),
+                    } for source, target, label in actual_edges]
+                    if relationship_rows:
+                        st.dataframe(pd.DataFrame(relationship_rows).drop_duplicates(), use_container_width=True, hide_index=True, height=320)
+                    else:
+                        st.info("No relationships found.")
+        else:
+            st.info("Click **Explore Graph** to load the graph.")
 
 
 # ============================================================
